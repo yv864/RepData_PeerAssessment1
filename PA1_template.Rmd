@@ -1,25 +1,86 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+author: "Jamin Chai"
+date: "7th June, 2017"
 ---
 
-
-## Loading and preprocessing the data
-
-
+## loading and preprocessing the data
+Change the working directory and load data into data frame `data`.
+```{r,echo=TRUE}
+setwd("~/Activity Data")
+act <- read.csv("activity.csv")
+```
 
 ## What is mean total number of steps taken per day?
+* Aggregate data frame containing steps and date.
+* create a histogram.
+* Calculate mean and median number of steps.
+```{r,echo=TRUE}
+steps_day <- aggregate(steps ~ date, act, sum)
 
+library(reshape2)
+data_melt <- melt(act, id.vars="date", measure.vars="steps", na.rm=FALSE)
+data_dcast <- dcast(data_melt, date ~ variable, sum)
+plot(data_dcast$date,data_dcast$steps, type="h", main="Histogram of Daily Steps", xlab="Date", ylab="Steps per Day", col="blue", lwd=8)
 
+steps_mean <- mean(steps_day$steps, na.rm = TRUE)
+steps_median <- median(steps_day$steps, na.rm = TRUE)
+```
 
 ## What is the average daily activity pattern?
+* Calculate average steps for each interval for all days.
+* Plot the average number of steps per Day by interval.
+* Find intervals with most average steps.
+```{r,echo=TRUE}
+steps_interval <- aggregate(steps ~ interval, act, mean)
+plot(steps_interval$interval, steps_interval$steps, type="l", xlab="Interval", ylab="Number of Steps", main="Average Number of Steps per Day by Interval")
+interval_max <- steps_interval[which.max(steps_interval$steps),1]
+```
 
+## Impute missing values.
+Missing values were substituted by inserting the average for each interval.
+```{r,echo=TRUE}
+data_NAs <- sum(!complete.cases(act))
+data_impute <- transform(act, steps = ifelse(is.na(act$steps), steps_interval$steps[match(act$interval, steps_interval$interval)], act$steps))
+```
 
+NAs were assumed to be zeros to fit the data. 
+```{r,echo=TRUE}
+data_impute[as.character(data_impute$date) == "2012-10-01", 1] <- 0
+```
 
-## Imputing missing values
+Recount total steps by day and create Histogram. 
+```{r,echo=TRUE}
+steps_day2 <- aggregate(steps ~ date, data_impute, sum)
+hist(steps_day2$steps, main = paste("Total Steps Each Day"), col="blue", xlab="Number of Steps")
+hist(steps_day$steps, main = paste("Total Steps Each Day"), col="red", xlab="Number of Steps", add=T)
+legend("topright", c("Imputed", "Not-imputed"), col=c("blue", "red"), lwd=10)
+```
 
+Calculate new mean and median number of the imputed data. 
+```{r,echo=TRUE}
+steps_mean2 <- mean(steps_day2$steps)
+steps_median2 <- median(steps_day2$steps)
+```
 
+Calculate differences between imputed and not-imputed data.
+```{r,echo=TRUE}
+mean_dif <- steps_mean2 - steps_mean
+median_dif <- steps_median2 - steps_median
+```
+
+Calculate total difference.
+```{r,echo=TRUE}
+total_dif <- sum(steps_day2$steps) - sum(steps_day$steps)
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+* Create a plot to compare and contrast the number of steps between the weekdays and weekends.
+```{r,echo=TRUE}
+weekdays <- c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
+data_impute$days = as.factor(ifelse(is.element(weekdays(as.Date(data_impute$date)),weekdays), "Weekday", "Weekend"))
+steps_interval3 <- aggregate(steps ~ interval + days, data_impute, mean)
+
+library(lattice)
+xyplot(steps_interval3$steps ~ steps_interval3$interval | steps_interval3$days, main="Average Steps per Day by Interval",xlab="Interval", ylab="Number of Steps",layout=c(1,2), type="l")
+```
