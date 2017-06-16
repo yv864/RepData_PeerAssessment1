@@ -23,6 +23,8 @@ steps_day <- aggregate(steps ~ date, act, sum)
 plot(steps ~ date, data=steps_day, type="h", xlab="Date", ylab="Number of Steps", main="Total Steps per Day", lwd=5, col=3)
 steps_mean <- mean(steps_day$steps)
 steps_median <- median(steps_day$steps)
+print(steps_mean)
+print(steps_median)
 ```
 
 ## What is the average daily activity pattern?
